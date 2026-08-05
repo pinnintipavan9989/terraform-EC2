@@ -141,7 +141,7 @@ resource "aws_instance" "ec2_instance" {
 
 # Create S3 bucket
 resource "aws_s3_bucket" "finance_bucket" {
-  bucket = "demo-terrapilot-ai"
+  bucket = "demo-terrapilot-us-east-1-4"
   acl    = "private"
 
   tags = {
