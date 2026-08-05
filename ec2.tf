@@ -119,10 +119,10 @@ data "aws_ami" "amazon_linux_2" {
 # Launch EC2 instance
 resource "aws_instance" "ec2_instance" {
 
-  ami                    = data.aws_ami.amazon_linux_2.id
-  instance_type          = "t2.micro"
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = "t2.micro"
 
-  subnet_id              = aws_default_subnet.default_az1.id
+  subnet_id = aws_default_subnet.default_az1.id
 
   vpc_security_group_ids = [
     aws_security_group.ec2_security_group.id
@@ -135,6 +135,19 @@ resource "aws_instance" "ec2_instance" {
 
   tags = {
     Name = "techmax server"
+  }
+}
+
+
+# Create S3 bucket for finance project
+resource "aws_s3_bucket" "finance_project_bucket" {
+  bucket = "finance-project-bucket-us-east-1"
+  acl    = "private"
+
+
+  tags = {
+    Name        = "finance project bucket"
+    Environment = "finance"
   }
 }
 
@@ -154,4 +167,10 @@ output "ssh_command" {
     "ssh -i myec2key.pem ec2-user@",
     aws_instance.ec2_instance.public_ip
   ])
+}
+
+
+# Output S3 bucket name
+output "s3_bucket_name" {
+  value = aws_s3_bucket.finance_project_bucket.id
 }
