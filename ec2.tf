@@ -141,7 +141,7 @@ resource "aws_instance" "ec2_instance" {
 
 # Create S3 bucket for finance project
 resource "aws_s3_bucket" "finance_project_bucket" {
-  bucket = "finance-project-bucket"
+  bucket = "finance-project-bucket-us-east-1"
   acl    = "private"
 
 
