@@ -2,7 +2,6 @@ provider "aws" {
   region = "us-east-1"
 }
 
-
 # Generate an SSH key pair and register it in AWS, saving the private key locally
 resource "tls_private_key" "myec2key" {
   algorithm = "RSA"
@@ -20,7 +19,6 @@ resource "local_file" "private_key" {
   file_permission = "0400"
 }
 
-
 # Create default VPC
 resource "aws_default_vpc" "default_vpc" {
   tags = {
@@ -28,10 +26,8 @@ resource "aws_default_vpc" "default_vpc" {
   }
 }
 
-
 # Get availability zones
 data "aws_availability_zones" "available_zones" {}
-
 
 # Create default subnet
 resource "aws_default_subnet" "default_az1" {
@@ -42,13 +38,11 @@ resource "aws_default_subnet" "default_az1" {
   }
 }
 
-
 # Security group for EC2
 resource "aws_security_group" "ec2_security_group" {
   name        = "ec2 security group"
   description = "allow access on ports 80 and 22"
   vpc_id      = aws_default_vpc.default_vpc.id
-
 
   # HTTP
   ingress {
@@ -59,7 +53,6 @@ resource "aws_security_group" "ec2_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-
   # SSH
   ingress {
     description = "ssh access"
@@ -69,7 +62,6 @@ resource "aws_security_group" "ec2_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-
   # Outbound access
   egress {
     from_port   = 0
@@ -78,36 +70,30 @@ resource "aws_security_group" "ec2_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-
   tags = {
     Name = "ec2 security group"
   }
 }
-
 
 # Get latest Amazon Linux 2 x86_64 AMI
 data "aws_ami" "amazon_linux_2" {
   most_recent = true
   owners      = ["amazon"]
 
-
   filter {
     name   = "name"
     values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
-
 
   filter {
     name   = "architecture"
     values = ["x86_64"]
   }
 
-
   filter {
     name   = "virtualization-type"
     values = ["hvm"]
   }
-
 
   filter {
     name   = "state"
@@ -115,14 +101,12 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-
 # Launch EC2 instance
 resource "aws_instance" "ec2_instance" {
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = "t2.micro"
 
-  ami                    = data.aws_ami.amazon_linux_2.id
-  instance_type          = "t2.micro"
-
-  subnet_id              = aws_default_subnet.default_az1.id
+  subnet_id = aws_default_subnet.default_az1.id
 
   vpc_security_group_ids = [
     aws_security_group.ec2_security_group.id
@@ -132,12 +116,59 @@ resource "aws_instance" "ec2_instance" {
 
   user_data = file("install_techmax.sh")
 
-
   tags = {
     Name = "techmax server"
   }
 }
 
+# Create S3 bucket
+resource "aws_s3_bucket" "demo_bucket" {
+  bucket = "demo-terraform-334"
+}
+
+# Enable versioning for S3 bucket
+resource "aws_s3_bucket_versioning" "demo_bucket_versioning" {
+  bucket = aws_s3_bucket.demo_bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Create public access block for S3 bucket
+resource "aws_s3_bucket_public_access_block" "demo_bucket_public_access_block" {
+  bucket = aws_s3_bucket.demo_bucket.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+# Create S3 bucket policy
+resource "aws_s3_bucket_policy" "demo_bucket_policy" {
+  bucket = aws_s3_bucket.demo_bucket.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.demo_bucket.arn}/*"
+      },
+    ]
+  })
+
+  depends_on = [aws_s3_bucket_public_access_block.demo_bucket_public_access_block]
+}
+
+# Create S3 object
+resource "aws_s3_object" "hello_object" {
+  bucket  = aws_s3_bucket.demo_bucket.id
+  key     = "hello.txt"
+  content = "Hello this is working"
+}
 
 # Output public URL
 output "ec2_public_ipv4_url" {
@@ -146,7 +177,6 @@ output "ec2_public_ipv4_url" {
     aws_instance.ec2_instance.public_ip
   ])
 }
-
 
 # Output SSH command
 output "ssh_command" {
