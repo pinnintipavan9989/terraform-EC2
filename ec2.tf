@@ -119,10 +119,10 @@ data "aws_ami" "amazon_linux_2" {
 # Launch EC2 instance
 resource "aws_instance" "ec2_instance" {
 
-  ami                    = data.aws_ami.amazon_linux_2.id
-  instance_type          = "t2.micro"
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = "t2.micro"
 
-  subnet_id              = aws_default_subnet.default_az1.id
+  subnet_id = aws_default_subnet.default_az1.id
 
   vpc_security_group_ids = [
     aws_security_group.ec2_security_group.id
@@ -134,7 +134,23 @@ resource "aws_instance" "ec2_instance" {
 
 
   tags = {
-    Name = "techmax server"
+    Name        = "techmax server"
+    Application = "techmax"
+  }
+
+  # Run the application after the instance is reachable
+  provisioner "remote-exec" {
+    connection {
+      type        = "ssh"
+      user        = "ec2-user"
+      host        = self.public_ip
+      private_key = tls_private_key.myec2key.private_key_pem
+    }
+
+    # Placeholder command – replace with actual start‑up commands for your app
+    inline = [
+      "echo \"Application started on $(date)\" >> /var/log/techmax.log"
+    ]
   }
 }
 
