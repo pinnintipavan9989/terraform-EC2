@@ -119,10 +119,10 @@ data "aws_ami" "amazon_linux_2" {
 # Launch EC2 instance
 resource "aws_instance" "ec2_instance" {
 
-  ami                    = data.aws_ami.amazon_linux_2.id
-  instance_type          = "t2.micro"
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = "t2.micro"
 
-  subnet_id              = aws_default_subnet.default_az1.id
+  subnet_id = aws_default_subnet.default_az1.id
 
   vpc_security_group_ids = [
     aws_security_group.ec2_security_group.id
@@ -154,4 +154,44 @@ output "ssh_command" {
     "ssh -i myec2key.pem ec2-user@",
     aws_instance.ec2_instance.public_ip
   ])
+}
+
+
+# S3 bucket for demo-pavstack-mission-1 (public)
+resource "aws_s3_bucket" "demo_bucket" {
+  bucket = "demo-pavstack-mission-1"
+
+  tags = {
+    Name = "demo-pavstack-mission-1"
+  }
+}
+
+# Disable all public access block settings to allow public bucket
+resource "aws_s3_bucket_public_access_block" "demo_bucket_block" {
+  bucket = aws_s3_bucket.demo_bucket.id
+
+  block_public_acls       = false
+  ignore_public_acls      = false
+  block_public_policy     = false
+  restrict_public_buckets = false
+}
+
+# Bucket policy granting public read access
+resource "aws_s3_bucket_policy" "demo_bucket_policy" {
+  bucket = aws_s3_bucket.demo_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.demo_bucket.arn}/*"
+      }
+    ]
+  })
+
+  depends_on = [aws_s3_bucket_public_access_block.demo_bucket_block]
 }
