@@ -116,13 +116,13 @@ data "aws_ami" "amazon_linux_2" {
 }
 
 
-# Launch EC2 instance
+# Launch EC2 instance (original)
 resource "aws_instance" "ec2_instance" {
 
-  ami                    = data.aws_ami.amazon_linux_2.id
-  instance_type          = "t2.micro"
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = "t2.micro"
 
-  subnet_id              = aws_default_subnet.default_az1.id
+  subnet_id = aws_default_subnet.default_az1.id
 
   vpc_security_group_ids = [
     aws_security_group.ec2_security_group.id
@@ -139,7 +139,30 @@ resource "aws_instance" "ec2_instance" {
 }
 
 
-# Output public URL
+# Launch EC2 instance for demo-pavstack
+resource "aws_instance" "demo_pavstack" {
+
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = "t2.micro"
+
+  subnet_id = aws_default_subnet.default_az1.id
+
+  vpc_security_group_ids = [
+    aws_security_group.ec2_security_group.id
+  ]
+
+  key_name = aws_key_pair.myec2key.key_name
+
+  # Reuse the same bootstrap script; adjust if a different script is required
+  user_data = file("install_techmax.sh")
+
+  tags = {
+    Name = "demo-pavstack"
+  }
+}
+
+
+# Output public URL for original instance
 output "ec2_public_ipv4_url" {
   value = join("", [
     "http://",
@@ -148,10 +171,28 @@ output "ec2_public_ipv4_url" {
 }
 
 
-# Output SSH command
+# Output SSH command for original instance
 output "ssh_command" {
   value = join("", [
     "ssh -i myec2key.pem ec2-user@",
     aws_instance.ec2_instance.public_ip
+  ])
+}
+
+
+# Output public URL for demo-pavstack instance
+output "demo_pavstack_public_ipv4_url" {
+  value = join("", [
+    "http://",
+    aws_instance.demo_pavstack.public_ip
+  ])
+}
+
+
+# Output SSH command for demo-pavstack instance
+output "demo_pavstack_ssh_command" {
+  value = join("", [
+    "ssh -i myec2key.pem ec2-user@",
+    aws_instance.demo_pavstack.public_ip
   ])
 }
